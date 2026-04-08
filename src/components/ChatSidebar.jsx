@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useDebounce } from "use-debounce";
+import { useUserSearch } from "../hooks/user/useUserSearch";
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -10,7 +12,7 @@ import {
   X,
   Check
 } from 'lucide-react';
-import { users, groups, getUserById, getGroupById } from '../data/dummyData';
+import { groups, getUserById, getGroupById } from '../data/dummyData';
 import { useAuth } from '../context/AuthContext';
 
 const ChatSidebar = ({ 
@@ -23,6 +25,10 @@ const ChatSidebar = ({
   onCloseMobile
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [search, setSearch] = useState('');
+  const [debouncedSearch] = useDebounce(search, 400);
+  const { data: users, isLoading } = useUserSearch(debouncedSearch);
+
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [showNewGroupModal, setShowNewGroupModal] = useState(false);
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -97,7 +103,9 @@ const ChatSidebar = ({
     );
   };
 
-  const availableUsers = users.filter(u => u.id !== user?.id);
+  const availableUsers = (users || []).filter(
+    (u) => u.id !== user?.id
+  );
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -160,8 +168,8 @@ const ChatSidebar = ({
               type="text"
               data-testid="chat-search-input"
               placeholder="Search conversations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="glass-input w-full pl-10 pr-4 py-2.5 rounded-xl text-sm"
             />
           </div>

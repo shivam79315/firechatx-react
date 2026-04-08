@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -49,6 +49,9 @@ const ProfilePage = () => {
     work: user?.work || 'Software Developer'
   });
 
+  console.log("ProfilePage render - user:", user);
+
+
   const avatarOptions = [
     'https://images.pexels.com/photos/764529/pexels-photo-764529.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=150&w=150',
     'https://images.pexels.com/photos/1516680/pexels-photo-1516680.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=150&w=150',
@@ -60,12 +63,7 @@ const ProfilePage = () => {
 
   // Dummy shared media
   const sharedMedia = [
-    { id: 1, type: 'image', url: 'https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg?auto=compress&cs=tinysrgb&w=400', date: '2 days ago' },
-    { id: 2, type: 'image', url: 'https://images.pexels.com/photos/1181671/pexels-photo-1181671.jpeg?auto=compress&cs=tinysrgb&w=400', date: '3 days ago' },
-    { id: 3, type: 'image', url: 'https://images.pexels.com/photos/3182812/pexels-photo-3182812.jpeg?auto=compress&cs=tinysrgb&w=400', date: '1 week ago' },
-    { id: 4, type: 'image', url: 'https://images.pexels.com/photos/3184339/pexels-photo-3184339.jpeg?auto=compress&cs=tinysrgb&w=400', date: '1 week ago' },
-    { id: 5, type: 'image', url: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400', date: '2 weeks ago' },
-    { id: 6, type: 'image', url: 'https://images.pexels.com/photos/3184325/pexels-photo-3184325.jpeg?auto=compress&cs=tinysrgb&w=400', date: '2 weeks ago' },
+    // { id: 1, type: 'image', url: 'https://images.pexels.com/photos/3184360/pexels-photo-3184360.jpeg?auto=compress&cs=tinysrgb&w=400', date: '2 days ago' },
   ];
 
   const sharedDocs = [

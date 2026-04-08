@@ -1,21 +1,24 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from "react";
+import { auth } from "@/api/firebase";
+import {
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  updateProfile as fbUpdateProfile,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
+import { getUser, createUserDoc, updateUserProfile } from "@/api/user.api";
 
 const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
-};
-
-const defaultUser = {
-  id: 'user-1',
-  name: 'Alex Johnson',
-  email: 'alex@example.com',
-  avatar: 'https://images.pexels.com/photos/764529/pexels-photo-764529.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=150&w=150',
-  status: 'online'
 };
 
 export const AuthProvider = ({ children }) => {
@@ -23,88 +26,89 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem('chat-user');
-    if (saved) {
-      try {
-        setUser(JSON.parse(saved));
-      } catch {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Fetch Firestore user
+        const firestoreUser = await getUser(firebaseUser.uid);
+
+        // Set global user state
+        setUser({
+          id: firebaseUser.uid,
+          email: firebaseUser.email,
+          ...firestoreUser,
+        });
+      } else {
         setUser(null);
       }
-    }
-    setIsLoading(false);
+
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  const login = (email, password) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (email && password) {
-          const userData = { ...defaultUser, email };
-          setUser(userData);
-          localStorage.setItem('chat-user', JSON.stringify(userData));
-          resolve(userData);
-        } else {
-          reject(new Error('Invalid credentials'));
-        }
-      }, 800);
-    });
+  const login = async (email, password) => {
+    const res = await signInWithEmailAndPassword(auth, email, password);
+
+    return {
+      id: res.user.uid,
+      name: res.user.displayName,
+      email: res.user.email,
+      avatar: res.user.photoURL,
+    };
   };
 
-  const register = (name, email, password) => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (name && email && password) {
-          const userData = { ...defaultUser, name, email };
-          setUser(userData);
-          localStorage.setItem('chat-user', JSON.stringify(userData));
-          resolve(userData);
-        } else {
-          reject(new Error('Please fill all fields'));
-        }
-      }, 800);
+  const register = async (name, email, password) => {
+    const res = await createUserWithEmailAndPassword(auth, email, password);
+
+    await fbUpdateProfile(res.user, {
+      displayName: name,
     });
+
+    await createUserDoc(res.user);
+
+    return res.user;
   };
 
-  const loginWithGoogle = () => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const userData = {
-          ...defaultUser,
-          name: 'Google User',
-          email: 'googleuser@gmail.com'
-        };
-        setUser(userData);
-        localStorage.setItem('chat-user', JSON.stringify(userData));
-        resolve(userData);
-      }, 1000);
-    });
+  const loginWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+    const res = await signInWithPopup(auth, provider);
+
+    await createUserDoc(res.user); // safe to call (can check inside)
+
+    return res.user;
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('chat-user');
+  const logout = async () => {
+    await signOut(auth);
   };
 
-  const updateProfile = (updates) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const updatedUser = { ...user, ...updates };
-        setUser(updatedUser);
-        localStorage.setItem('chat-user', JSON.stringify(updatedUser));
-        resolve(updatedUser);
-      }, 500);
-    });
+  const updateProfile = async (updates) => {
+    if (!auth.currentUser) return;
+
+    try {
+      await fbUpdateProfile(auth.currentUser, updates);
+      const result = await updateUserProfile(updates);
+      console.log(result);
+      return result;
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      throw error;
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      isLoading, 
-      login, 
-      register, 
-      loginWithGoogle, 
-      logout,
-      updateProfile 
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        login,
+        register,
+        loginWithGoogle,
+        logout,
+        updateProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
